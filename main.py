@@ -48,6 +48,7 @@ import requests
 import time
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -83,7 +84,14 @@ X_TITLE = os.environ.get("X_TITLE", "Unified Pipeline")
 # FastAPI app
 # -----------------------------
 app = FastAPI(title="Unified Pipeline API", version="1.0")
-
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # -----------------------------
 # Models
@@ -881,7 +889,7 @@ def process_document(file: UploadFile = File(...)):
 
     try:
         # 1) Save upload
-        src_path = job_dir / file.filename
+        src_path = job_dir / (file.filename or "upload.bin")
         with src_path.open("wb") as f:
             f.write(file.file.read())
 
@@ -891,7 +899,7 @@ def process_document(file: UploadFile = File(...)):
         # 2) PDF → Markdown (Reducto)
         md_text = pdf_to_markdown(pdf_path)
         write_text(job_dir, "markdown.txt", md_text)
-        print("DEBUG: Reducto to MD Stage Finished", md_text)
+        print("DEBUG: Reducto to MD Stage Finished")
 
         # 3–5) Classification (single pass)
         raw_cls, cls, cls_prompt_text = run_classification(md_text, job_dir)
@@ -906,7 +914,7 @@ def process_document(file: UploadFile = File(...)):
             plans_by_loc=plans_by_loc,
             loc_pages=cls_loc_pages,
             job_dir=job_dir,
-            max_workers=10,
+            max_workers=10,  # your current setting
         )
         print(f"DEBUG: Extraction Stage Finished: {len(extracted)} plans")
 
@@ -918,12 +926,10 @@ def process_document(file: UploadFile = File(...)):
             job_id=job_id,
             classification_output=raw_cls,
             plan_identification_output=raw_plans,
-            classification_prompt_text=cls_prompt_text,      
+            classification_prompt_text=cls_prompt_text,
             plan_identification_prompt_text=plan_ident_prompt_text,
             json_result=result,
         )
-
-        # Ensure aliases (with spaces) are emitted in JSON
         return resp
 
     except HTTPException:
@@ -931,7 +937,6 @@ def process_document(file: UploadFile = File(...)):
     except Exception as e:
         write_text(job_dir, "errors.log", f"{type(e).__name__}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.get("/files/{job_id}/{filename}")
 def get_artifact(job_id: str, filename: str):
