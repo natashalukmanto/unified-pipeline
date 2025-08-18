@@ -1,0 +1,13 @@
+# Web API
+fastapi>=0.111.0,<1.0
+uvicorn[standard]>=0.29.0
+
+# Models / validation
+pydantic>=2.7,<3.0
+
+# Uploads & HTTP
+python-multipart>=0.0.9
+requests>=2.32.3
+
+# Env variables
+python-dotenv>=1.0.1
