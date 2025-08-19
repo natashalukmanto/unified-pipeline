@@ -588,7 +588,7 @@ def openrouter_chat(messages: List[Dict[str, str]], model: Optional[str] = None)
         #     "enabled": True,
         #     "exclude": False
         # },
-        "max_tokens": 64000,
+        "max_output_tokens": 64000,
         "temperature": 1,
         "top_p": 0.999,
         "top_k": 250,
@@ -652,7 +652,6 @@ def parse_plan_names(raw: str) -> Dict[str, List[str]]:
             plan = m.group(2).strip()
             plans_by_loc.setdefault(loc, []).append(plan)
     return plans_by_loc
-
 
 # -----------------------------
 # Pipeline stages
@@ -741,10 +740,11 @@ def run_extraction(md_text: str, loc: str, plan_name: str, job_dir: Path) -> Dic
         "You are a precise, deterministic parser. Output only 'Category::Name::Value' lines. "
         "Include 'Source::Pages::<[list]>' if possible."
     )
-    user = f"{prompt}\n\nLOC: {loc}\nPlan Name: {plan_name}\n\n---\nDOCUMENT MARKDOWN:\n{md_text}"
+    used_prompt = prompt.replace("<Document></Document>", f"<Document>{md_text}</Document>")
+    used_prompt = used_prompt.replace("{{plan_name}}", plan_name)
     raw = openrouter_chat([
         {"role": "system", "content": system},
-        {"role": "user", "content": user},
+        {"role": "user", "content": used_prompt},
     ])
     safe = f"extract_{slug(loc)}_{slug(plan_name)}.txt"
     write_text(job_dir, safe, raw)
@@ -882,6 +882,7 @@ def run_all_extractions(
                         "total_plans": total + skipped_count,
                         "secs": round(time.perf_counter() - start_all, 3)})
     return results
+
 # ---------- /helpers ----------
 
 # -----------------------------
