@@ -656,21 +656,28 @@ def parse_plan_names(raw: str) -> Dict[str, List[str]]:
 # Pipeline stages
 # -----------------------------
 def run_classification(md_text: str, job_dir: Path) -> tuple[str, Dict[str, Any], str]:
-    """Step 3–5: fetch classification prompt; send prompt+markdown; return raw + parsed + prompt_text."""
-    prompt = get_prompt("classify-document-and-identify-carrier-loc-and-plan-names-v-1-0-variant-1")
+    """
+    Step 3–5: fetch classification prompt; inject <Document>{md_text}</Document>;
+    send to OpenRouter; return (raw_output, used_prompt).
+    """
+    # 1) Fetch the base prompt from Vellum
+    base_prompt = get_prompt("classify-document-and-identify-carrier-loc-and-plan-names-v-1-0-variant-1")
+    used_prompt = base_prompt.replace("<Document></Document>", f"<Document>{md_text}</Document>", 1)
+
     system = (
         "You are a precise, deterministic parser. Output exactly the requested key::value lines, "
         "no commentary, no markdown."
     )
-    user = f"{prompt}\n\n---\nDOCUMENT MARKDOWN:\n{md_text}"
-    raw = openrouter_chat([
+
+    raw_output = openrouter_chat([
         {"role": "system", "content": system},
-        {"role": "user", "content": user},
+        {"role": "user", "content": used_prompt},
     ])
-    write_text(job_dir, "classification.txt", raw)
-    # NEW: store the prompt we used
-    write_text(job_dir, "classification_prompt.txt", prompt)
-    return raw, parse_classification(raw), prompt
+
+    write_text(job_dir, "classification.txt", raw_output)
+    write_text(job_dir, "classification_prompt.txt", used_prompt)
+
+    return raw_output, parse_classification(raw_output), used_prompt
 
 def extract_loc_from_classification(classification_output: str) -> list[str]:
     """
