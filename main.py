@@ -695,26 +695,24 @@ def extract_loc_from_classification(classification_output: str) -> list[str]:
 def run_plan_identification(md_text: str, previous_output: str, job_dir: Path) -> tuple[str, Dict[str, List[str]], str]:
     """Step 6–7: fetch plan-ident prompt; send prompt + classification output + markdown; return raw + plans + prompt_text."""
     base_prompt = get_prompt("plan-name-identification-prompt-v-18-0-variant-1")
+    used_prompt = base_prompt.replace("<Document></Document>", f"<Document>{md_text}</Document>", 1)
+    used_prompt = base_prompt.replace("<Classification Output></Classification Output>", f"<Classification Output>{previous_output}</Classification Output>", 1)
 
-    # Extract LOCs from the classification output (previous_output), drop "Other"
     locs = extract_loc_from_classification(previous_output)
     loc_str = ", ".join(locs)
 
-    # Replace the {{LOC}} placeholder in the prompt
-    prompt = base_prompt.replace("{{LOC}}", loc_str)
+    used_prompt = used_prompt.replace("{{LOC}}", loc_str)
 
     system = "You are a precise, deterministic parser. Output on...ly <index>::Plans::<LOC>::<Plan Name>::$0.00::<page_ref> lines."
-    user = f"{prompt}\n\nCLASSIFICATION OUTPUT (pass 1):\n{previous_output}\n\n---\nDOCUMENT MARKDOWN:\n{md_text}"
 
-    raw = openrouter_chat([
+    raw_output = openrouter_chat([
         {"role": "system", "content": system},
-        {"role": "user", "content": user},
+        {"role": "user", "content": used_prompt},
     ])
 
-    write_text(job_dir, "plan_identification.txt", raw)
-    # NEW: store the prompt we used (after LOC substitution)
-    write_text(job_dir, "plan_identification_prompt.txt", prompt)
-    return raw, parse_plan_names(raw), prompt
+    write_text(job_dir, "plan_identification.txt", raw_output)
+    write_text(job_dir, "plan_identification_prompt.txt", used_prompt)
+    return raw_output, parse_plan_names(raw_output), used_prompt
 
 # Map LOC → Vellum prompt slug for extraction
 PROMPT_MAP: Dict[str, str] = {
