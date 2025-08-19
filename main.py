@@ -696,7 +696,8 @@ def run_plan_identification(md_text: str, previous_output: str, job_dir: Path) -
     """Step 6–7: fetch plan-ident prompt; send prompt + classification output + markdown; return raw + plans + prompt_text."""
     base_prompt = get_prompt("plan-name-identification-prompt-v-18-0-variant-1")
     used_prompt = base_prompt.replace("<Document></Document>", f"<Document>{md_text}</Document>", 1)
-    used_prompt = base_prompt.replace("<Classification Output></Classification Output>", f"<Classification Output>{previous_output}</Classification Output>", 1)
+    print(md_text)
+    used_prompt = used_prompt.replace("<Classification Output></Classification Output>", f"<Classification Output>{previous_output}</Classification Output>", 1)
 
     locs = extract_loc_from_classification(previous_output)
     loc_str = ", ".join(locs)
