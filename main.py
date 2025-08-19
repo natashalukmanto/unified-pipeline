@@ -583,6 +583,12 @@ def openrouter_chat(messages: List[Dict[str, str]], model: Optional[str] = None)
     payload = {
         "model": model or MODEL_ID,
         "messages": messages,
+        "reasoning": {
+            "max_tokens": 1024,
+            "enabled": True,
+            "exclude": False
+        },
+        "max_tokens": 64000,
         "temperature": 1,
         "top_p": 0.999,
         "top_k": 250,
