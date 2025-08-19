@@ -583,11 +583,11 @@ def openrouter_chat(messages: List[Dict[str, str]], model: Optional[str] = None)
     payload = {
         "model": model or MODEL_ID,
         "messages": messages,
-        "reasoning": {
-            "max_tokens": 1024,
-            "enabled": True,
-            "exclude": False
-        },
+        # "reasoning": {
+        #     "max_tokens": 1024,
+        #     "enabled": True,
+        #     "exclude": False
+        # },
         "max_tokens": 64000,
         "temperature": 1,
         "top_p": 0.999,
@@ -599,6 +599,8 @@ def openrouter_chat(messages: List[Dict[str, str]], model: Optional[str] = None)
         raise HTTPException(status_code=502, detail=f"OpenRouter error: {r.text}")
     data = r.json()
     try:
+        choice = data["choices"][0]
+        print("finish_reason:", choice.get("finish_reason"), "stop_reason:", choice.get("stop_reason"))
         return data["choices"][0]["message"]["content"]
     except Exception:
         raise HTTPException(status_code=502, detail=f"Malformed OpenRouter response: {data}")
