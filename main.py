@@ -646,7 +646,7 @@ def parse_plan_names(raw: str) -> Dict[str, List[str]]:
     """
     plans_by_loc: Dict[str, List[str]] = {}
     for line in raw.splitlines():
-        m = re.match(r"\d+::Plans::([A-Za-z]+)::(.+?)::\$0\.00::\d+", line.strip())
+        m = re.match(r"\s*\d+::Plans::([A-Za-z]+)::(.+?)::[^:]*::\d+\s*$", line.strip())
         if m:
             loc = m.group(1).strip()
             plan = m.group(2).strip()
@@ -687,7 +687,7 @@ def extract_loc_from_classification(classification_output: str) -> list[str]:
       Basic Info::Line of Coverage::[Medical, Dental, Vision, STD, LTD, LifeADD, VLifeADD, VL, VA, VCI, VHI, Other]
     Returns a list without 'Other'.
     """
-    m = re.search(r"Basic Info::Line of Coverage::\[(.*?)\]", classification_output or "")
+    m = re.search(r"Basic Info::(?:Line of Coverage|LOC_Temp)::\[(.*?)\]", classification_output or "")
     if not m:
         return []
     locs = [x.strip() for x in m.group(1).split(",")]
@@ -724,7 +724,7 @@ PROMPT_MAP: Dict[str, str] = {
     "LifeADD": "life-add-life-add-unified-refiner-v-2-0-variant-1",
     "STD": "std-unified-refiner-v-3-0-variant-1",
     "LTD": "ltd-unified-refiner-v-3-0-variant-1",
-    "VLifeADD": "vol-life-and-add-generic-unified-refiner-reducto-v-7-0-variant-1",
+    "VL": "vol-life-and-add-generic-unified-refiner-reducto-v-7-0-variant-1",
     "VSTD": "vol-std-generic-unified-refiner-reducto-v-8-0-variant-1",
     "VLTD": "vol-ltd-generic-unified-refiner-reducto-v-8-0-variant-1",
     "VA": "vol-accident-generic-unified-refiner-reducto-v-7-0-variant-1",
